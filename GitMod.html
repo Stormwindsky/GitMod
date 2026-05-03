@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitMod Viewer</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --text-primary: #24292f;
+            --text-secondary: #57606a;
+            --accent: #0969da;
+            --border: #d0d7de;
+            --card-bg: #ffffff;
+            --shadow: rgba(140, 149, 159, 0.2) 0px 8px 24px;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --border: #30363d;
+            --card-bg: #1c2128;
+            --shadow: rgba(0, 0, 0, 0.5) 0px 8px 24px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .theme-toggle {
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        .sidebar { text-align: center; }
+
+        .mod-icon {
+            width: 130px;
+            height: 130px;
+            border-radius: 16px;
+            object-fit: cover;
+            border: 2px solid var(--border);
+            background-color: var(--card-bg);
+            box-shadow: var(--shadow);
+        }
+
+        .main-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .repo-title {
+            font-size: 2rem;
+            margin-top: 0;
+            text-transform: capitalize;
+        }
+
+        .btn-github {
+            display: inline-block;
+            background-color: var(--accent);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+        }
+
+        /* --- CAROUSEL SLIDER STYLE --- */
+        .slider-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+            border-radius: 12px;
+            background: #000;
+            border: 1px solid var(--border);
+        }
+
+        .slider-wrapper {
+            display: flex;
+            height: 100%;
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .slide {
+            min-width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide img, .slide iframe {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border: none;
+        }
+
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.7);
+            color: #333;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: background 0.3s;
+        }
+
+        [data-theme="dark"] .nav-btn {
+            background: rgba(88, 166, 255, 0.4);
+            color: white;
+        }
+
+        .nav-btn:hover { background: var(--accent); color: white; }
+        .prev-btn { left: 15px; }
+        .next-btn { right: 15px; }
+
+        #readme-content {
+            line-height: 1.6;
+            margin-top: 2rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+
+        #readme-content img { max-width: 100%; }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div id="site-logo" style="font-weight: bold; font-size: 1.2rem;">GitMod View</div>
+    <button class="theme-toggle" onclick="toggleTheme()">Toggle Dark/Light</button>
+</header>
+
+<div class="container" id="main-view" style="display: none;">
+    <aside class="sidebar">
+        <img id="mod-icon" src="" alt="Icon" class="mod-icon">
+        <div style="margin-top: 1rem;">
+            <p id="author-name" style="font-weight: bold;"></p>
+        </div>
+    </aside>
+
+    <main class="main-card">
+        <h1 id="repo-title" class="repo-title">Loading...</h1>
+        <a id="github-link" href="#" target="_blank" class="btn-github">View Source on GitHub</a>
+        
+        <!-- Updated Gallery to Slider -->
+        <div class="slider-container" id="slider-root">
+            <button class="nav-btn prev-btn" onclick="moveSlide(-1)">&#10094;</button>
+            <div class="slider-wrapper" id="slider-wrapper"></div>
+            <button class="nav-btn next-btn" onclick="moveSlide(1)">&#10095;</button>
+        </div>
+        
+        <div id="readme-content"></div>
+    </main>
+</div>
+
+<div id="error-msg" style="text-align:center; margin-top: 50px; display:none;">
+    <h1>Error 404</h1>
+    <p>Repository or files not found. Check if your files are in 'main' or 'master' branch.</p>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const username = params.get('u');
+    const repo = params.get('d');
+    const PLACEHOLDER_ICON = "https://raw.githubusercontent.com/Stormwindsky/ArtLibre/main/ArtLibre/ArtLibre/files/Mimine%20cute.jpg";
+    
+    let currentSlide = 0;
+    let totalSlides = 0;
+
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+    }
+
+    function moveSlide(step) {
+        if (totalSlides === 0) return;
+        currentSlide = (currentSlide + step + totalSlides) % totalSlides;
+        const wrapper = document.getElementById('slider-wrapper');
+        wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
+    }
+
+    function formatTitle(str) {
+        return str.replace(/[-_]/g, ' ');
+    }
+
+    function parseToki(content) {
+        const data = { thumbnails: [], icon: null, clickSound: null, cursor: null };
+        const vidMatches = content.matchAll(/Vid\s*=\s*(https?:\/\/[^\s]+)/g);
+        const imgMatches = content.matchAll(/Img\s*=\s*(https?:\/\/[^\s]+)/g);
+        for (const m of vidMatches) data.thumbnails.push({ type: 'vid', url: m[1] });
+        for (const m of imgMatches) data.thumbnails.push({ type: 'img', url: m[1] });
+        const iconMatch = content.match(/Pi\s*=\s*(https?:\/\/[^\s]+)/);
+        if (iconMatch) data.icon = iconMatch[1];
+        const soundMatch = content.match(/ClickMouse\s*=\s*(https?:\/\/[^\s]+)/);
+        if (soundMatch) data.clickSound = soundMatch[1];
+        const cursorMatch = content.match(/CustomCursor\s*=\s*(https?:\/\/[^\s]+)/);
+        if (cursorMatch) data.cursor = cursorMatch[1];
+        return data;
+    }
+
+    async function fetchFromGithub(user, rp, filename) {
+        let res = await fetch(`https://raw.githubusercontent.com/${user}/${rp}/main/${filename}`);
+        if (!res.ok) {
+            res = await fetch(`https://raw.githubusercontent.com/${user}/${rp}/master/${filename}`);
+        }
+        return res;
+    }
+
+    async function loadRepo() {
+        if (!username || !repo) {
+            document.getElementById('error-msg').style.display = 'block';
+            return;
+        }
+
+        try {
+            document.getElementById('repo-title').innerText = formatTitle(repo);
+            document.getElementById('github-link').href = `https://github.com/${username}/${repo}`;
+            document.getElementById('author-name').innerText = `By ${username}`;
+
+            const tokiRes = await fetchFromGithub(username, repo, 'GitMod.toki');
+            let tokiData = null;
+            if (tokiRes.ok) {
+                const tokiText = await tokiRes.text();
+                tokiData = parseToki(tokiText);
+            }
+
+            const iconImg = document.getElementById('mod-icon');
+            iconImg.src = (tokiData && tokiData.icon) ? tokiData.icon : PLACEHOLDER_ICON;
+
+            if (tokiData && tokiData.cursor) {
+                document.body.style.cursor = `url('${tokiData.cursor}'), auto`;
+            }
+
+            // --- RENDER SLIDER ---
+            const wrapper = document.getElementById('slider-wrapper');
+            if (tokiData && tokiData.thumbnails.length > 0) {
+                totalSlides = tokiData.thumbnails.length;
+                tokiData.thumbnails.forEach(item => {
+                    const slide = document.createElement('div');
+                    slide.className = 'slide';
+                    if (item.type === 'img') {
+                        slide.innerHTML = `<img src="${item.url}" alt="Mod Image">`;
+                    } else if (item.url.includes('youtube.com') || item.url.includes('youtu.be')) {
+                        const ytId = item.url.includes('v=') ? item.url.split('v=')[1].split('&')[0] : item.url.split('/').pop();
+                        slide.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}" allowfullscreen></iframe>`;
+                    } else {
+                        slide.innerHTML = `<div style="color:white;text-align:center;"><a href="${item.url}" target="_blank">View External Media</a></div>`;
+                    }
+                    wrapper.appendChild(slide);
+                });
+            } else {
+                document.getElementById('slider-root').style.display = 'none';
+            }
+
+            if (tokiData && tokiData.clickSound) {
+                const audio = new Audio(tokiData.clickSound);
+                document.addEventListener('mousedown', () => audio.play().catch(() => {}));
+            }
+
+            const readmeRes = await fetchFromGithub(username, repo, 'README.md');
+            if (readmeRes.ok) {
+                const readmeText = await readmeRes.text();
+                document.getElementById('readme-content').innerHTML = marked.parse(readmeText);
+            }
+
+            document.getElementById('main-view').style.display = 'grid';
+        } catch (e) {
+            document.getElementById('error-msg').style.display = 'block';
+        }
+    }
+
+    initTheme();
+    loadRepo();
+</script>
+
+<footer>
+    MIT License | Created by Stormwindsky
+</footer>
+</body>
+</html>

@@ -207,7 +207,6 @@
         <h1 id="repo-title" class="repo-title">Loading...</h1>
         <a id="github-link" href="#" target="_blank" class="btn-github">View Source on GitHub</a>
         
-        <!-- Updated Gallery to Slider -->
         <div class="slider-container" id="slider-root">
             <button class="nav-btn prev-btn" onclick="moveSlide(-1)">&#10094;</button>
             <div class="slider-wrapper" id="slider-wrapper"></div>
@@ -257,16 +256,34 @@
 
     function parseToki(content) {
         const data = { thumbnails: [], icon: null, clickSound: null, cursor: null };
-        const vidMatches = content.matchAll(/Vid\s*=\s*(https?:\/\/[^\s]+)/g);
-        const imgMatches = content.matchAll(/Img\s*=\s*(https?:\/\/[^\s]+)/g);
-        for (const m of vidMatches) data.thumbnails.push({ type: 'vid', url: m[1] });
-        for (const m of imgMatches) data.thumbnails.push({ type: 'img', url: m[1] });
-        const iconMatch = content.match(/Pi\s*=\s*(https?:\/\/[^\s]+)/);
-        if (iconMatch) data.icon = iconMatch[1];
-        const soundMatch = content.match(/ClickMouse\s*=\s*(https?:\/\/[^\s]+)/);
-        if (soundMatch) data.clickSound = soundMatch[1];
-        const cursorMatch = content.match(/CustomCursor\s*=\s*(https?:\/\/[^\s]+)/);
-        if (cursorMatch) data.cursor = cursorMatch[1];
+        
+        // Fonction de nettoyage pour isoler l'URL proprement
+        const cleanUrl = (url) => {
+            if (!url) return null;
+            return url.split(/[\[\s>]/)[0].trim();
+        };
+
+        const vidMatches = content.matchAll(/Vid\s*=\s*(https?:\/\/[^\s<]+)/g);
+        const imgMatches = content.matchAll(/Img\s*=\s*(https?:\/\/[^\s<]+)/g);
+        
+        for (const m of vidMatches) {
+            const url = cleanUrl(m[1]);
+            if (url) data.thumbnails.push({ type: 'vid', url: url });
+        }
+        for (const m of imgMatches) {
+            const url = cleanUrl(m[1]);
+            if (url) data.thumbnails.push({ type: 'img', url: url });
+        }
+        
+        const iconMatch = content.match(/Pi\s*=\s*(https?:\/\/[^\s<]+)/);
+        if (iconMatch) data.icon = cleanUrl(iconMatch[1]);
+        
+        const soundMatch = content.match(/ClickMouse\s*=\s*(https?:\/\/[^\s<]+)/);
+        if (soundMatch) data.clickSound = cleanUrl(soundMatch[1]);
+        
+        const cursorMatch = content.match(/CustomCursor\s*=\s*(https?:\/\/[^\s<]+)/);
+        if (cursorMatch) data.cursor = cleanUrl(cursorMatch[1]);
+        
         return data;
     }
 
@@ -303,7 +320,6 @@
                 document.body.style.cursor = `url('${tokiData.cursor}'), auto`;
             }
 
-            // --- RENDER SLIDER ---
             const wrapper = document.getElementById('slider-wrapper');
             if (tokiData && tokiData.thumbnails.length > 0) {
                 totalSlides = tokiData.thumbnails.length;

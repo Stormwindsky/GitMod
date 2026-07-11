@@ -91,6 +91,8 @@
             padding: 2rem;
             box-shadow: var(--shadow);
             position: relative;
+            min-width: 0; /* Empêche la carte de s'élargir au-delà de sa colonne grid */
+            word-wrap: break-word; /* Force les longs textes/liens à aller à la ligne */
         }
 
         .repo-title {
